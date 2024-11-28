@@ -11,6 +11,10 @@ ID = "id"
 TITLE = "title"
 CONTENT = "content"
 
+# Sorting and Direction of Post
+DIRECTION_ASC = "asc"
+DIRECTION_DESC = "desc"
+
 POSTS = [
     {"id": 1, "title": "First post", "content": "This is the first post."},
     {"id": 2, "title": "Second post", "content": "This is the second post."},
@@ -67,7 +71,40 @@ def get_posts():
 
                                         )), 400
 
-    return jsonify(POSTS)
+    sort = request.args.get('sort')
+    direction = request.args.get('direction')
+
+    if direction is None and sort is None:
+        return jsonify(POSTS)
+
+    if direction != DIRECTION_ASC and direction != DIRECTION_DESC:
+        return jsonify(
+            standard_error_response(400,
+                                    "Bad Request",
+                                    "VALIDATION_ERROR_INVALID_SORT_DIRECTION",
+                                    "Validation failed.",
+                                    f"The direction field is invalid. [{direction}]",
+                                    "/api/posts"
+
+                                    )), 400
+
+    if sort != TITLE and sort != CONTENT:
+        return jsonify(
+            standard_error_response(400,
+                                    "Bad Request",
+                                    "VALIDATION_ERROR_INVALID_SORT",
+                                    "Validation failed.",
+                                    f"The sort field is invalid. [{sort}]",
+                                    "/api/posts"
+
+                                    )), 400
+
+    if sort and direction:
+        if direction == "desc":
+            return jsonify(
+                sorted(POSTS, key=lambda post: post[sort], reverse=True))
+        else:
+            return jsonify(sorted(POSTS, key=lambda post: post[sort]))
 
 
 def find_post_by_id(post_id):
