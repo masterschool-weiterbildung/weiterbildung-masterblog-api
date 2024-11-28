@@ -129,5 +129,35 @@ def handle_post(id):
     return jsonify(post)
 
 
+@app.route('/api/posts/search', methods=['GET'])
+def search_posts():
+    title = request.args.get(TITLE)
+    content = request.args.get(CONTENT)
+
+    if title and content:
+        filtered_title_content = [post for post in POSTS if
+                                  (title in post.get(TITLE)) and (
+                                          content in post.get(CONTENT))]
+
+        if filtered_title_content:
+            return jsonify(filtered_title_content)
+
+    if title:
+        filtered_title = [post for post in POSTS if
+                          title in post.get(TITLE)]
+
+        if filtered_title:
+            return jsonify(filtered_title)
+
+    if content:
+        filtered_content = [post for post in POSTS if
+                            content in post.get(CONTENT)]
+
+        if filtered_content:
+            return jsonify(filtered_content)
+
+    return jsonify([])
+
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5002, debug=True)
