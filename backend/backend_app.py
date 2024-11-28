@@ -6,7 +6,10 @@ from marshmallow import Schema, fields, ValidationError
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
+
 ID = "id"
+TITLE = "title"
+CONTENT = "content"
 
 POSTS = [
     {"id": 1, "title": "First post", "content": "This is the first post."},
@@ -74,7 +77,7 @@ def find_post_by_id(post_id):
 
 
 @app.route('/api/posts/<int:id>', methods=['DELETE'])
-def delete_book(id):
+def delete_post(id):
     post = find_post_by_id(id)
 
     if post is None:
@@ -85,10 +88,43 @@ def delete_book(id):
                                     "The requested resource could not be found.",
                                     [
                                         f"No records match the provided ID {id}."],
-                                    "/api/v1/books"
+                                    "/api/posts"
                                     )), 404
 
     POSTS.remove(post)
+
+    return jsonify(post)
+
+
+@app.route('/api/posts/<int:id>', methods=['PUT'])
+def handle_post(id):
+    post = find_post_by_id(id)
+
+    if post is None:
+        return jsonify(
+            standard_error_response(404,
+                                    "Not Found",
+                                    "RESOURCE_NOT_FOUND",
+                                    "The requested resource could not be found.",
+                                    [
+                                        f"No records match the provided ID {id}."],
+                                    "/api/posts"
+                                    )), 404
+
+    try:
+        new_data = schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify(
+            standard_error_response(400,
+                                    "Bad Request",
+                                    "VALIDATION_ERROR_MISSING_TITLE_CONTENT",
+                                    "Validation failed.",
+                                    f"{err}",
+                                    "/api/posts"
+                                    )), 400
+
+    post[TITLE] = new_data.get(TITLE, post[TITLE])
+    post[CONTENT] = new_data.get(CONTENT, post[CONTENT])
 
     return jsonify(post)
 
