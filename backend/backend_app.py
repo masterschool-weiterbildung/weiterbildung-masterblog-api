@@ -6,6 +6,7 @@ from marshmallow import Schema, fields, ValidationError
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
+ID = "id"
 
 POSTS = [
     {"id": 1, "title": "First post", "content": "This is the first post."},
@@ -64,6 +65,32 @@ def get_posts():
                                         )), 400
 
     return jsonify(POSTS)
+
+
+def find_post_by_id(post_id):
+    post = [post for post in POSTS if post[ID] == post_id]
+
+    return post[0] if post else None
+
+
+@app.route('/api/posts/<int:id>', methods=['DELETE'])
+def delete_book(id):
+    post = find_post_by_id(id)
+
+    if post is None:
+        return jsonify(
+            standard_error_response(404,
+                                    "Not Found",
+                                    "RESOURCE_NOT_FOUND",
+                                    "The requested resource could not be found.",
+                                    [
+                                        f"No records match the provided ID {id}."],
+                                    "/api/v1/books"
+                                    )), 404
+
+    POSTS.remove(post)
+
+    return jsonify(post)
 
 
 if __name__ == '__main__':
