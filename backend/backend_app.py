@@ -1,12 +1,14 @@
 import datetime
 
-import limiter
+from flask_limiter import Limiter
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_limiter.util import get_remote_address
 from flask_swagger_ui import get_swaggerui_blueprint
 from marshmallow import Schema, fields, ValidationError
 
 app = Flask(__name__)
+limiter = Limiter(app=app, key_func=get_remote_address)
 CORS(app)  # This will enable CORS for all routes
 
 ID = "id"
@@ -56,7 +58,7 @@ class ItemSchema(Schema):
 schema = ItemSchema()
 
 
-@app.route('/api/posts', methods=['GET', 'POST'])
+@app.route('/api/v1/posts', methods=['GET', 'POST'])
 @limiter.limit("10/minute")
 def get_posts():
     if request.method == 'POST':
@@ -76,7 +78,7 @@ def get_posts():
                                         "VALIDATION_ERROR_MISSING_TITLE_CONTENT",
                                         "Validation failed.",
                                         f"{err}",
-                                        "/api/posts"
+                                        "/api/v1/posts"
 
                                         )), 400
 
@@ -97,7 +99,7 @@ def get_posts():
                                         "VALIDATION_ERROR_INVALID_DIRECTION",
                                         "Validation failed.",
                                         f"The direction field is invalid. [{direction}]",
-                                        "/api/posts"
+                                        "/api/v1/posts"
 
                                         )), 400
 
@@ -108,7 +110,7 @@ def get_posts():
                                         "VALIDATION_ERROR_INVALID_SORT",
                                         "Validation failed.",
                                         f"The sort field is invalid. [{sort}]",
-                                        "/api/posts"
+                                        "/api/v1/posts"
 
                                         )), 400
 
@@ -138,7 +140,7 @@ def find_post_by_id(post_id):
     return post[0] if post else None
 
 
-@app.route('/api/posts/<int:id>', methods=['DELETE'])
+@app.route('/api/v1/posts/<int:id>', methods=['DELETE'])
 @limiter.limit("10/minute")
 def delete_post(id):
     post = find_post_by_id(id)
@@ -151,7 +153,7 @@ def delete_post(id):
                                     "The requested resource could not be found.",
                                     [
                                         f"No records match the provided ID {id}."],
-                                    "/api/posts"
+                                    "/api/v1/posts"
                                     )), 404
 
     POSTS.remove(post)
@@ -159,7 +161,7 @@ def delete_post(id):
     return jsonify(post)
 
 
-@app.route('/api/posts/<int:id>', methods=['PUT'])
+@app.route('/api/v1/posts/<int:id>', methods=['PUT'])
 @limiter.limit("10/minute")
 def handle_post(id):
     post = find_post_by_id(id)
@@ -172,7 +174,7 @@ def handle_post(id):
                                     "The requested resource could not be found.",
                                     [
                                         f"No records match the provided ID {id}."],
-                                    "/api/posts"
+                                    "/api/v1/posts"
                                     )), 404
 
     try:
@@ -184,7 +186,7 @@ def handle_post(id):
                                     "VALIDATION_ERROR_MISSING_TITLE_CONTENT",
                                     "Validation failed.",
                                     f"{err}",
-                                    "/api/posts"
+                                    "/api/v1/posts"
                                     )), 400
 
     post[TITLE] = new_data.get(TITLE, post[TITLE])
@@ -195,7 +197,7 @@ def handle_post(id):
     return jsonify(post)
 
 
-@app.route('/api/posts/search', methods=['GET'])
+@app.route('/api/v1/posts/search', methods=['GET'])
 @limiter.limit("10/minute")
 def search_posts():
     title = request.args.get(TITLE)
