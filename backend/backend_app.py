@@ -2,6 +2,7 @@ import datetime
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
 from marshmallow import Schema, fields, ValidationError
 
 app = Flask(__name__)
@@ -10,14 +11,18 @@ CORS(app)  # This will enable CORS for all routes
 ID = "id"
 TITLE = "title"
 CONTENT = "content"
+AUTHOR = "author"
+DATE = "date"
 
 # Sorting and Direction of Post
 DIRECTION_ASC = "asc"
 DIRECTION_DESC = "desc"
 
 POSTS = [
-    {"id": 1, "title": "First post", "content": "This is the first post."},
-    {"id": 2, "title": "Second post", "content": "This is the second post."},
+    {"id": 1, "title": "First post", "content": "This is the first post.",
+     "author": "Jerome", "date": "2023-06-07"},
+    {"id": 2, "title": "Second post", "content": "This is the second post.",
+     "author": "Savanna", "date": "2024-06-07"},
 ]
 
 
@@ -43,6 +48,8 @@ def jsonify_response(payload):
 class ItemSchema(Schema):
     title = fields.Str(required=True)
     content = fields.Str(required=True)
+    author = fields.Str(required=True)
+    date = fields.Str(required=True)
 
 
 schema = ItemSchema()
@@ -71,40 +78,56 @@ def get_posts():
 
                                         )), 400
 
-    sort = request.args.get('sort')
-    direction = request.args.get('direction')
+    else:
+        options_directions = [DIRECTION_ASC, DIRECTION_DESC]
+        options_sort = [CONTENT, TITLE, AUTHOR, DATE]
 
-    if direction is None and sort is None:
-        return jsonify(POSTS)
+        sort = request.args.get('sort')
+        direction = request.args.get('direction')
 
-    if direction != DIRECTION_ASC and direction != DIRECTION_DESC:
-        return jsonify(
-            standard_error_response(400,
-                                    "Bad Request",
-                                    "VALIDATION_ERROR_INVALID_SORT_DIRECTION",
-                                    "Validation failed.",
-                                    f"The direction field is invalid. [{direction}]",
-                                    "/api/posts"
+        if direction is None and sort is None:
+            return jsonify(POSTS)
 
-                                    )), 400
-
-    if sort != TITLE and sort != CONTENT:
-        return jsonify(
-            standard_error_response(400,
-                                    "Bad Request",
-                                    "VALIDATION_ERROR_INVALID_SORT",
-                                    "Validation failed.",
-                                    f"The sort field is invalid. [{sort}]",
-                                    "/api/posts"
-
-                                    )), 400
-
-    if sort and direction:
-        if direction == "desc":
+        if direction not in options_directions:
             return jsonify(
-                sorted(POSTS, key=lambda post: post[sort], reverse=True))
-        else:
-            return jsonify(sorted(POSTS, key=lambda post: post[sort]))
+                standard_error_response(400,
+                                        "Bad Request",
+                                        "VALIDATION_ERROR_INVALID_DIRECTION",
+                                        "Validation failed.",
+                                        f"The direction field is invalid. [{direction}]",
+                                        "/api/posts"
+
+                                        )), 400
+
+        if sort not in options_sort:
+            return jsonify(
+                standard_error_response(400,
+                                        "Bad Request",
+                                        "VALIDATION_ERROR_INVALID_SORT",
+                                        "Validation failed.",
+                                        f"The sort field is invalid. [{sort}]",
+                                        "/api/posts"
+
+                                        )), 400
+
+        if sort and direction:
+            if direction == "desc":
+                if sort == DATE:
+                    return jsonify(
+                        sorted(POSTS,
+                               key=lambda post: datetime.date.fromisoformat(
+                                   post[sort]),
+                               reverse=True))
+
+                return jsonify(
+                    sorted(POSTS, key=lambda post: post[sort], reverse=True))
+            else:
+                if sort == DATE:
+                    return jsonify(sorted(POSTS, key=lambda
+                        post: datetime.date.fromisoformat(
+                        post[sort])))
+
+                return jsonify(sorted(POSTS, key=lambda post: post[sort]))
 
 
 def find_post_by_id(post_id):
@@ -162,6 +185,8 @@ def handle_post(id):
 
     post[TITLE] = new_data.get(TITLE, post[TITLE])
     post[CONTENT] = new_data.get(CONTENT, post[CONTENT])
+    post[AUTHOR] = new_data.get(AUTHOR, post[AUTHOR])
+    post[DATE] = new_data.get(DATE, post[DATE])
 
     return jsonify(post)
 
@@ -170,11 +195,43 @@ def handle_post(id):
 def search_posts():
     title = request.args.get(TITLE)
     content = request.args.get(CONTENT)
+    author = request.args.get(AUTHOR)
+    date_post = request.args.get(DATE)
 
     if title and content:
         filtered_title_content = [post for post in POSTS if
-                                  (title in post.get(TITLE)) and (
-                                          content in post.get(CONTENT))]
+                                  (title in post.get(TITLE))
+                                  and (content in post.get(CONTENT))
+                                  ]
+
+        if filtered_title_content:
+            return jsonify(filtered_title_content)
+
+    if title and author:
+        filtered_title_author = [post for post in POSTS if
+                                 (title in post.get(TITLE))
+                                 and (author in post.get(AUTHOR))
+                                 ]
+
+        if filtered_title_author:
+            return jsonify(filtered_title_author)
+
+    if title and date_post:
+        filtered_title_date_post = [post for post in POSTS if
+                                    (title in post.get(TITLE))
+                                    and (date_post in post.get(DATE))
+                                    ]
+
+        if filtered_title_date_post:
+            return jsonify(filtered_title_date_post)
+
+    if title and content and author and date_post:
+        filtered_title_content = [post for post in POSTS if
+                                  (title in post.get(TITLE))
+                                  and (content in post.get(CONTENT))
+                                  and (author in post.get(AUTHOR))
+                                  and (date_post in post.get(DATE))
+                                  ]
 
         if filtered_title_content:
             return jsonify(filtered_title_content)
@@ -193,8 +250,34 @@ def search_posts():
         if filtered_content:
             return jsonify(filtered_content)
 
+    if author:
+        filtered_author = [post for post in POSTS if
+                           author in post.get(AUTHOR)]
+
+        if filtered_author:
+            return jsonify(filtered_author)
+
+    if date_post:
+        filtered_date_post = [post for post in POSTS if
+                              date_post in post.get(DATE)]
+
+        if filtered_date_post:
+            return jsonify(filtered_date_post)
+
     return jsonify([])
 
+
+SWAGGER_URL = "/api/docs"
+API_URL = "/static/masterblog.json"
+
+swagger_ui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': 'Masterblog API'
+    }
+)
+app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5002, debug=True)
