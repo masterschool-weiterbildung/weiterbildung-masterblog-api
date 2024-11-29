@@ -7,6 +7,23 @@ from flask_limiter.util import get_remote_address
 from flask_swagger_ui import get_swaggerui_blueprint
 from marshmallow import Schema, fields, ValidationError
 
+"""
+Masterblog API
+
+This Flask application serves as a simple blogging platform, providing CRUD
+functionality for managing blog posts. It includes features such as
+rate limiting, validation, sorting, and searching, along with
+Swagger documentation for API reference.
+
+Features:
+- Rate Limiting: Limits API usage to prevent abuse (e.g., 10 requests per minute).
+- Validation: Ensures data integrity using Marshmallow.
+- Swagger Documentation: Interactive API reference accessible at `/api/docs`.
+- Sorting and Filtering: Flexible query parameters for retrieving posts.
+- In-memory Data: Posts are stored temporarily in memory for simplicity (not persistent).
+
+"""
+
 app = Flask(__name__)
 limiter = Limiter(app=app, key_func=get_remote_address)
 CORS(app)
@@ -31,6 +48,24 @@ POSTS = [
 
 def standard_error_response(status, error, error_code, message, details,
                             path):
+    """
+    Constructs a standardized error response dictionary.
+
+    Parameters:
+    -----------
+    status : int
+        The HTTP status code for the error (e.g., 400, 404, 500).
+    error : str
+        A brief description of the error type (e.g., "Bad Request", "Not Found").
+    error_code : str
+        A unique code representing the specific error (e.g., "VALIDATION_ERROR").
+    message : str
+        A detailed error message providing context about the error.
+    details : str
+        Additional information or debug details about the error.
+    path : str
+        The API path or endpoint where the error occurred.
+    """
     return {
         "status": f"{status}",
         "error": f"{error}",
@@ -42,6 +77,15 @@ def standard_error_response(status, error, error_code, message, details,
 
 
 def jsonify_response(payload):
+    """
+    Constructs a standardized JSON response for the API.
+
+    Parameters:
+    -----------
+    payload : list or dict
+        The main data to include in the response, typically a list of posts
+        or a single post object.
+    """
     return {
         "posts": payload,
         "createdAt": datetime.datetime.now().isoformat()
@@ -49,6 +93,21 @@ def jsonify_response(payload):
 
 
 class ItemSchema(Schema):
+    """
+    Defines the schema for validating blog post data.
+
+    Fields:
+    -------
+    title : fields.Str
+        The title of the blog post. This field is required.
+    content : fields.Str
+        The content of the blog post. This field is required.
+    author : fields.Str
+        The author of the blog post. This field is required.
+    date : fields.Str
+        The date of the blog post in string format (e.g., "YYYY-MM-DD").
+        This field is required.
+    """
     title = fields.Str(required=True)
     content = fields.Str(required=True)
     author = fields.Str(required=True)
@@ -61,6 +120,31 @@ schema = ItemSchema()
 @app.route('/api/v1/posts', methods=['GET', 'POST'])
 @limiter.limit("10/minute")
 def get_posts():
+    """
+    Handles requests to the '/api/v1/posts' endpoint for retrieving or creating posts.
+
+    Methods:
+    --------
+    GET:
+        - Retrieves a list of blog posts.
+        - Supports sorting and ordering based on query parameters:
+            * sort: Attribute to sort by (e.g., "content", "title", "author", "date").
+            * direction: Sorting direction ("asc" or "desc").
+        - If no query parameters are provided, returns the unsorted list of posts.
+
+    POST:
+        - Creates a new blog post.
+        - Validates the input data using the `ItemSchema`.
+        - Automatically assigns a unique ID to the new post.
+
+
+    Query Parameters (GET):
+    ------------------------
+    sort : str, optional
+        The attribute to sort the posts by (e.g., "content", "title", "author", "date").
+    direction : str, optional
+        The direction to sort the posts ("asc" for ascending, "desc" for descending).
+    """
     if request.method == 'POST':
         try:
             new_post = schema.load(request.get_json())
@@ -135,6 +219,14 @@ def get_posts():
 
 
 def find_post_by_id(post_id):
+    """
+    Finds a blog post by its unique ID.
+
+    Parameters:
+    -----------
+    post_id : int
+        The unique identifier of the post to search for.
+    """
     post = [post for post in POSTS if post[ID] == post_id]
 
     return post[0] if post else None
@@ -143,6 +235,22 @@ def find_post_by_id(post_id):
 @app.route('/api/v1/posts/<int:id>', methods=['DELETE'])
 @limiter.limit("10/minute")
 def delete_post(id):
+    """
+    Deletes a blog post by its unique ID.
+
+    Parameters:
+    -----------
+    id : int
+        The unique identifier of the post to delete.
+
+    Returns:
+    --------
+    JSON Response:
+        - If the post is found and successfully deleted:
+          The deleted post as a JSON object.
+        - If no post is found with the provided ID:
+          A standardized error response with status 404.
+    """
     post = find_post_by_id(id)
 
     if post is None:
@@ -164,6 +272,23 @@ def delete_post(id):
 @app.route('/api/v1/posts/<int:id>', methods=['PUT'])
 @limiter.limit("10/minute")
 def handle_post(id):
+    """
+    Updates an existing blog post by its unique ID.
+
+    Parameters:
+    -----------
+    id : int
+        The unique identifier of the post to update.
+
+    Returns:
+    --------
+    JSON Response:
+        - If the post is found and successfully updated:
+          The updated post as a JSON object.
+        - If no post is found with the provided ID:
+          A standardized error response with status 404.
+        - If validation fails: A standardized error response with status 400.
+    """
     post = find_post_by_id(id)
 
     if post is None:
@@ -200,6 +325,32 @@ def handle_post(id):
 @app.route('/api/v1/posts/search', methods=['GET'])
 @limiter.limit("10/minute")
 def search_posts():
+    """
+    Searches for blog posts based on query parameters.
+
+    If no matching posts are found, an empty list is returned.
+
+    Query Parameters:
+    -----------------
+    title : str (optional)
+        The title of the post to search for.
+    content : str (optional)
+        The content of the post to search for.
+    author : str (optional)
+        The author of the post to search for.
+    date : str (optional)
+        The date of the post to search for.
+
+    Returns:
+    --------
+    JSON Response:
+        - A list of posts matching the search criteria, or an empty list if no matches are found.
+
+    Response Codes:
+    ---------------
+    - 200: Successfully returned the filtered list of posts.
+
+    """
     title = request.args.get(TITLE)
     content = request.args.get(CONTENT)
     author = request.args.get(AUTHOR)
