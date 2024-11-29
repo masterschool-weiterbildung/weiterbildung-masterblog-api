@@ -1,5 +1,6 @@
 import datetime
 
+import limiter
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -56,6 +57,7 @@ schema = ItemSchema()
 
 
 @app.route('/api/posts', methods=['GET', 'POST'])
+@limiter.limit("10/minute")
 def get_posts():
     if request.method == 'POST':
         try:
@@ -137,6 +139,7 @@ def find_post_by_id(post_id):
 
 
 @app.route('/api/posts/<int:id>', methods=['DELETE'])
+@limiter.limit("10/minute")
 def delete_post(id):
     post = find_post_by_id(id)
 
@@ -157,6 +160,7 @@ def delete_post(id):
 
 
 @app.route('/api/posts/<int:id>', methods=['PUT'])
+@limiter.limit("10/minute")
 def handle_post(id):
     post = find_post_by_id(id)
 
@@ -192,6 +196,7 @@ def handle_post(id):
 
 
 @app.route('/api/posts/search', methods=['GET'])
+@limiter.limit("10/minute")
 def search_posts():
     title = request.args.get(TITLE)
     content = request.args.get(CONTENT)
