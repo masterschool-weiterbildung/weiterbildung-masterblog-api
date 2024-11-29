@@ -37,7 +37,7 @@ A RESTful blogging platform built with Flask, providing features for managing bl
 
 4. Run the application:
    ```bash
-   python app.py
+   python backend_app.py
    ```
 
 5. Access the API:
