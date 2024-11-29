@@ -16,7 +16,7 @@
     }
   ],
   "paths": {
-    "/api/posts": {
+    "/api/v1/posts": {
       "get": {
         "description": "Returns all posts",
         "produces": [
@@ -73,7 +73,7 @@
         }
       }
     },
-    "/api/posts/{id}": {
+    "/api/v1/posts{id}": {
       "delete": {
         "description": "Delete a post",
         "produces": [
@@ -126,7 +126,7 @@
         }
       }
     },
-    "/api/posts/search": {
+    "/api/v1/posts/search": {
       "get": {
         "description": "Search a post",
         "produces": [
