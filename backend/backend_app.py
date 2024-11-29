@@ -9,7 +9,7 @@ from marshmallow import Schema, fields, ValidationError
 
 app = Flask(__name__)
 limiter = Limiter(app=app, key_func=get_remote_address)
-CORS(app)  # This will enable CORS for all routes
+CORS(app)
 
 ID = "id"
 TITLE = "title"
