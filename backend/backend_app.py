@@ -266,7 +266,8 @@ def delete_post(id):
 
     POSTS.remove(post)
 
-    return jsonify(post)
+    return jsonify(
+        {"message": f"Post with id {id} has been deleted successfully."})
 
 
 @app.route('/api/v1/posts/<int:id>', methods=['PUT'])
